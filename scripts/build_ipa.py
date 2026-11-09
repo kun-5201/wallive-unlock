@@ -15,6 +15,8 @@
 """
 import json
 import os
+import re
+import time
 import shutil
 import subprocess
 import sys
@@ -25,8 +27,64 @@ import zipfile
 import lief
 
 # 官方企业分发的直链(未加密)。若官方更新了版本,从
-# https://walllive.18ir.cn 首页的 manifest 重新取最新链接即可。
-OFFICIAL_IPA_URL = "https://ipa-cdn.18ir.cn/cdn-ipa/wallive/23/4/app-afba55795a89e7c8e14c428b.ipa"
+# 官方企业分发的下载页。构建时动态解析:下载页 → manifest → IPA 直链,
+# 官方更新版本后无需改代码。CDN 会拒绝无浏览器 UA 的请求，必须带头。
+DOWNLOAD_PAGE_URL = "https://walllive.18ir.cn/"
+BROWSER_UA = ("Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) "
+             "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1")
+
+
+_COOKIE_JAR = os.path.join(tempfile.gettempdir(), "wallive_cookies.txt")
+
+
+def _curl(url, dest=None, referer=None, extra_headers=None):
+    """统一用 curl 拉取(服务器对 urllib 的请求特征有区别,且必须带浏览器 UA + 会话 Cookie)"""
+    cmd = ["curl", "-sS", "--fail", "-L", "-m", "600",
+           "-A", BROWSER_UA, "-c", _COOKIE_JAR, "-b", _COOKIE_JAR]
+    if referer:
+        cmd += ["-e", referer]
+    if extra_headers:
+        for h in extra_headers:
+            cmd += ["-H", h]
+    if dest:
+        cmd += ["-o", dest]
+    cmd.append(url)
+    # 服务器偶发 502/限流,重试几次
+    last_err = None
+    for attempt in range(4):
+        try:
+            r = subprocess.run(cmd, check=True, capture_output=not dest)
+            if not dest:
+                return r.stdout
+            return
+        except subprocess.CalledProcessError as e:
+            last_err = e
+            if dest and os.path.exists(dest) and os.path.getsize(dest) < 10_000_000:
+                os.remove(dest)
+            time.sleep(6 * (attempt + 1))
+    raise last_err
+
+
+def download_official_ipa(dest):
+    """下载页 → manifest → IPA 直链,跟随官方最新版本。"""
+    print("      fetching download page ...")
+    page = _curl(DOWNLOAD_PAGE_URL)
+    m = re.search(r'data-manifest="([^"]+)"', page.decode("utf-8"))
+    assert m, "manifest ticket not found on download page"
+    manifest_url = m.group(1)
+    if manifest_url.startswith("/"):
+        manifest_url = DOWNLOAD_PAGE_URL.rstrip("/") + manifest_url
+
+    print("      fetching manifest ...")
+    manifest = _curl(manifest_url, referer=DOWNLOAD_PAGE_URL)
+    m2 = re.search(r"<string>(https?[^<]*\.ipa[^<]*)</string>", manifest.decode("utf-8"))
+    assert m2, "ipa url not found in manifest"
+    ipa_url = m2.group(1)
+
+    print("      downloading IPA ...")
+    _curl(ipa_url, dest=dest, referer=DOWNLOAD_PAGE_URL)
+    assert os.path.getsize(dest) > 10_000_000, "downloaded IPA too small"
+
 
 DYLIB_INSTALL_PATH = "@executable_path/Frameworks/WalliveUnlock.dylib"
 
@@ -138,7 +196,7 @@ def main():
     work = tempfile.mkdtemp(prefix="wallive_")
     print("[1/6] downloading official IPA ...")
     official = os.path.join(work, "official.ipa")
-    urllib.request.urlretrieve(OFFICIAL_IPA_URL, official)
+    download_official_ipa(official)
     print(f"      {os.path.getsize(official) / 1e6:.1f} MB")
 
     print("[2/6] extracting ...")
