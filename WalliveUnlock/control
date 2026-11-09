@@ -1,0 +1,9 @@
+Package: com.mutually.walliveunlock
+Name: WalliveUnlock
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: 交互壁纸 本地会员解锁（响应注入，无需外部服务）
+Maintainer: MacXK
+Author: MacXK
+Section: Tweaks
+Depends: mobilesubstrate | ellekit

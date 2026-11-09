@@ -1,0 +1,42 @@
+{
+  "_v": 6,
+  "ok": true,
+  "server_time": "{{NOW_ISO}}",
+  "account": {
+    "enabled": true,
+    "bound": true,
+    "online_allowed": true
+  },
+  "policy": {
+    "daily_limit": 9999,
+    "weekly_limit": 9999,
+    "reward_ad_count": 5,
+    "reset_timezone": "Asia/Shanghai",
+    "reset_weekday": 3,
+    "membership_enabled": true,
+    "ios_ads_enabled": false
+  },
+  "plans": [
+    { "id": "monthly", "name": "月卡", "price_cents": 888, "duration_unit": "month", "duration_count": 1, "enabled": true },
+    { "id": "yearly", "name": "年卡", "price_cents": 1088, "duration_unit": "year", "duration_count": 1, "enabled": true },
+    { "id": "lifetime", "name": "永久会员", "price_cents": 1288, "duration_unit": "permanent", "duration_count": 0, "enabled": true }
+  ],
+  "membership": {
+    "status": "vip",
+    "is_permanent": true,
+    "vip_expires_at": "2099-12-31 23:59:59"
+  },
+  "quota": {
+    "daily_used": 0,
+    "daily_reserved": 0,
+    "daily_remaining": 9999,
+    "daily_next_reset": "2099-01-01T00:00:00+08:00",
+    "used": 0,
+    "reserved": 0,
+    "remaining": 9999,
+    "next_reset": "2099-01-01T00:00:00+08:00",
+    "completed_ids": [],
+    "pending_ids": []
+  },
+  "checkout_available": true
+}
