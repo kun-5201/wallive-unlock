@@ -39,7 +39,8 @@ _COOKIE_JAR = os.path.join(tempfile.gettempdir(), "wallive_cookies.txt")
 
 def _curl(url, dest=None, referer=None, extra_headers=None):
     """统一用 curl 拉取(服务器对 urllib 的请求特征有区别,且必须带浏览器 UA + 会话 Cookie)"""
-    cmd = ["curl", "-sS", "--fail", "-L", "-m", "600",
+    # --http1.1: 服务器对 HTTP/2 会报 stream error (curl exit 16)
+    cmd = ["curl", "-sS", "--http1.1", "--fail", "-L", "-m", "600",
            "-A", BROWSER_UA, "-c", _COOKIE_JAR, "-b", _COOKIE_JAR]
     if referer:
         cmd += ["-e", referer]
